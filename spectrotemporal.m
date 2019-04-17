@@ -8,6 +8,7 @@ function weightarray = spectrotemporal(sd,filelist, varargin)
 %   varargin, having had a default value associated first.
 %
 % started LSS 16 April 2019
+% last updated 17 April 2019
 debug = true ;
 % defaults
 N = 100 ; % number of bandpass channels
