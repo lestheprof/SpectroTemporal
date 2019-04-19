@@ -138,7 +138,8 @@ fclose(inputfid) ;
 
 % for each file...% process each file, one by one
 for i = 1:nooffiles
-% read the sound and bandpass the signal
+    % red the sound
+% bandpass the signal
 % calculate the smoothed absolute signal for each band
 % possibly calculate oosignal for each band
 % possibly calculate the onset signal for each band
