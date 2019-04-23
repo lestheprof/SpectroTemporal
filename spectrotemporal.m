@@ -19,8 +19,11 @@ Fs = 44100 ; % sampling rate
 minCochFreq = 200 ; % minimum gammatone frequency
 maxCochFreq = 5000 ; %  maximum gammatone freuency
 N_erbs = 1 ; % default bandwidth
+MAXDURATION = 100 ; % maximal duration of a single sound file
 smoothlength = 0.01 ; % Bartlett filter parameter length of triangular (bartlett) window used to smooth
 %   rectified signal
+useonset = true ; % will we use onset signals in processing?
+useoffset = true ; % will we use offset signals in processing?
 % parameters for onset and offset signal generation (if used)
 sigma1 = 0.02 ; %half difference of Gaussians std
 sigmaratio = 1.2 ; % ratio of the two HDOG's
@@ -37,12 +40,12 @@ k_notfired = 0.01 ; % adaptation learnking rate for non-firing neurons
 
 % varargin parameter setting
 i = 1 ;
-while(i<=size(varargin,2))  
+while(i<=size(varargin,2))
     switch lower(varargin{i})
         case 'fs' % sampling rate
             Fs = varargin{i+1};
             i=i+1 ;
-       case 'mincochfreq' % minimum gammatone frequency
+        case 'mincochfreq' % minimum gammatone frequency
             minCochFreq = varargin{i+1};
             i=i+1 ;
         case 'maxcochfreq' %  maximum gammatone freuency
@@ -54,8 +57,17 @@ while(i<=size(varargin,2))
         case 'n'
             N = varargin{i+1}; % number of bandpass channels
             i=i+1 ;
+        case 'maxduration'
+            MAXDURATION = varargin{i+1}; % maximal duration of a single sound file
+            i=i+1 ;
         case 'smoothlength'
             smoothlength = varargin{i+1}; % smoothing for signal
+            i=i+1 ;
+        case 'useonset'
+            useonset = varargin{i+1}; % will we use the onset signal?
+            i=i+1 ;
+        case 'useoffset'
+            useoffset = varargin{i+1}; % will we use the offset signal?
             i=i+1 ;
         case 'sigma1'
             sigma1 = varargin{i+1}; % HDoG std (in seconds)
@@ -88,8 +100,8 @@ while(i<=size(varargin,2))
         case 'k_notfired'
             k_notfired = varargin{i+1}; % learning rate for neurons not firing
             i=i+1 ;
-
-         otherwise
+            
+        otherwise
             error('spectrotemporal: Unknown argument %s given',varargin{i});
     end
     i=i+1 ;
@@ -138,15 +150,37 @@ fclose(inputfid) ;
 
 % for each file...% process each file, one by one
 for i = 1:nooffiles
-% read the sound and bandpass the signal
-% calculate the smoothed absolute signal for each band
-% possibly calculate oosignal for each band
-% possibly calculate the onset signal for each band
-% possibly calculate the offset signal for each band
-% (use one of the above)
-% initialise the network at the start of the sound
-% run the network, updating the weights
-
+    % read the sound and bandpass the signal
+    [bmSig, sig, fs, datalength, cochCFs, delayVector] = ...
+        bmsigmono(filelist{i}, N, minCochFreq, maxCochFreq, MAXDURATION, 'gamma', N_erbs) ;
+    % calculate the smoothed absolute signal for each band
+    absSig = zeros(size(bmSig)) ; % initialise
+    if (useonset || useoffset) % if either onset or offset signal is to be used we'll also need the onset/offset signal
+        ooSig = zeros(size(bmSig)) ; % initialise
+    end
+    for band = 1:N % calculate the abs, and possibly onset and offset signals for each band
+        absSig(band,:) = conv(abs(bmSig(band,:)),bartlettwindow, 'same') ;
+        if (useonset || useoffset) % only calculate if required
+            ooSig = conv(absSig,hdog, 'same') ;
+        end
+    end
+    % possibly calculate the onset signal for each band
+    % possibly calculate the offset signal for each band
+    if useonset
+        onset_signal = abs(max(0,oosignal)) ; % onset signal, positive or 0, 1 per band
+    end
+    if useoffset
+        offset_signal = abs(max(0, -oosignal)) ; % offset signal, positive or 0, 1 per band
+    end
+    if (useonset || useoffset)
+        if logonset % logarithmic adjustment?
+            onset_signal = log(1 + onset_signal) ;
+            offset_signal = log(1 + offset_signal) ;
+        end
+    end
+    % initialise the network at the start of the sound
+    % run the network, updating the weights
+    
 end
 
 % return the final weight matrix.
