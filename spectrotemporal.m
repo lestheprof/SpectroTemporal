@@ -25,10 +25,13 @@ smoothlength = 0.01 ; % Bartlett filter parameter length of triangular (bartlett
 useonset = true ; % will we use onset signals in processing?
 useoffset = true ; % will we use offset signals in processing?
 % parameters for onset and offset signal generation (if used)
-sigma1 = 0.02 ; %half difference of Gaussians std
+sigma1 = 0.01 ; %half difference of Gaussians std
 sigmaratio = 1.2 ; % ratio of the two HDOG's
 nsamples = 4000 ; % number of samples used in onset/offset convolving function
+logabs = false ; % use log of absolute value
+logonset = false ; % use log of onset/offset values
 % LIF parameters
+LIFtimestep = 0.001 ; % timestep for use with LIF network
 dissipation = 100 ; % dissipation, 1/tau
 rp = 0.002 ; % refractory period
 % weight initialisation
@@ -69,6 +72,12 @@ while(i<=size(varargin,2))
         case 'useoffset'
             useoffset = varargin{i+1}; % will we use the offset signal?
             i=i+1 ;
+        case 'logabs' 
+            logabs = varargin{i+1}; % do we take the log of the absolute value?
+            i=i+1 ;
+        case 'logonset'
+            logonset = varargin{i+1}; % do we use the log of the onset/offset values
+            i=i+1 ;
         case 'sigma1'
             sigma1 = varargin{i+1}; % HDoG std (in seconds)
             i=i+1 ;
@@ -80,6 +89,9 @@ while(i<=size(varargin,2))
             i=i+1 ;
         case 'm'
             M = varargin{i+1}; % number of LIF neurons
+            i=i+1 ;
+        case 'liftimestep'
+            LIFtimestep = varargin{i+1}; % timestep for use with LIF neurons
             i=i+1 ;
         case 'dissipation'
             dissipation = varargin{i+1}; % dissipation for all LIF neurons
@@ -152,7 +164,10 @@ fclose(inputfid) ;
 for i = 1:nooffiles
     % read the sound and bandpass the signal
     [bmSig, sig, fs, datalength, cochCFs, delayVector] = ...
-        bmsigmono(filelist{i}, N, minCochFreq, maxCochFreq, MAXDURATION, 'gamma', N_erbs) ;
+        bmsigmono([SD '/' filelist{i}], N, minCochFreq, maxCochFreq, MAXDURATION, 'gamma', N_erbs) ;
+    if (Fs ~= fs)
+        disp(['spectrotemporal: provided sample rate = ' num2str(Fs) ' differs from sound sample rate = ' num2str(fs)]) ;
+    end
     % calculate the smoothed absolute signal for each band
     absSig = zeros(size(bmSig)) ; % initialise
     if (useonset || useoffset) % if either onset or offset signal is to be used we'll also need the onset/offset signal
@@ -161,16 +176,16 @@ for i = 1:nooffiles
     for band = 1:N % calculate the abs, and possibly onset and offset signals for each band
         absSig(band,:) = conv(abs(bmSig(band,:)),bartlettwindow, 'same') ;
         if (useonset || useoffset) % only calculate if required
-            ooSig = conv(absSig,hdog, 'same') ;
+            ooSig(band,:) = conv(absSig(band,:),hdog, 'same') ;
         end
     end
     % possibly calculate the onset signal for each band
     % possibly calculate the offset signal for each band
     if useonset
-        onset_signal = abs(max(0,oosignal)) ; % onset signal, positive or 0, 1 per band
+        onset_signal = abs(max(0,ooSig)) ; % onset signal, positive or 0, 1 per band
     end
     if useoffset
-        offset_signal = abs(max(0, -oosignal)) ; % offset signal, positive or 0, 1 per band
+        offset_signal = abs(max(0, -ooSig)) ; % offset signal, positive or 0, 1 per band
     end
     if (useonset || useoffset)
         if logonset % logarithmic adjustment?
@@ -178,6 +193,23 @@ for i = 1:nooffiles
             offset_signal = log(1 + offset_signal) ;
         end
     end
+    if logabs
+        absSig = log(absSig) ;
+    end
+    % repackage the inputs into buckets of length LIFtimestep
+    % always do absSig
+    r_absSig = resample(absSig', 1, floor(LIFtimestep * fs) )' ;
+    % normalise: adjust all to mean of 1
+    r_absSig = r_absSig/mean(r_absSig, 'all') ;
+    if useonset % only do onset if it's to be used
+        r_onset_signal = resample(onset_signal', 1, floor(LIFtimestep * fs) )' ;
+        r_onset_signal = r_onset_signal/mean(r_onset_signal, 'all') ;
+    end
+    if useoffset % only do offset if it's to be used
+        r_offset_signal = resample(offset_signal', 1, floor(LIFtimestep * fs) )' ;
+        r_offset_signal = r_offset_signal/mean(r_offset_signal, 'all') ;
+    end
+    
     % initialise the network at the start of the sound
     % run the network, updating the weights
     
