@@ -22,8 +22,8 @@ N_erbs = 1 ; % default bandwidth
 MAXDURATION = 100 ; % maximal duration of a single sound file
 smoothlength = 0.01 ; % Bartlett filter parameter length of triangular (bartlett) window used to smooth
 %   rectified signal
-useonset = true ; % will we use onset signals in processing?
-useoffset = true ; % will we use offset signals in processing?
+useonset = false ; % will we use onset signals in processing?
+useoffset = false ; % will we use offset signals in processing?
 % parameters for onset and offset signal generation (if used)
 sigma1 = 0.01 ; %half difference of Gaussians std
 sigmaratio = 1.2 ; % ratio of the two HDOG's
@@ -32,8 +32,9 @@ logabs = false ; % use log of absolute value
 logonset = false ; % use log of onset/offset values
 % LIF parameters
 LIFtimestep = 0.001 ; % timestep for use with LIF network
-dissipation = 100 ; % dissipation, 1/tau
-rp = 0.002 ; % refractory period
+LIFdissipation = 100 ; % dissipation, 1/tau
+LIFrp = 0.002 ; % refractory period
+rptimesteps = ceil(LIFrp/LIFtimestep) ; % rp in timesteps
 % weight initialisation
 weightnorm = 1 ; % normalised value of weight
 weightssupplied = false ; % default is to randomly initialise weights
@@ -72,7 +73,7 @@ while(i<=size(varargin,2))
         case 'useoffset'
             useoffset = varargin{i+1}; % will we use the offset signal?
             i=i+1 ;
-        case 'logabs' 
+        case 'logabs'
             logabs = varargin{i+1}; % do we take the log of the absolute value?
             i=i+1 ;
         case 'logonset'
@@ -93,11 +94,11 @@ while(i<=size(varargin,2))
         case 'liftimestep'
             LIFtimestep = varargin{i+1}; % timestep for use with LIF neurons
             i=i+1 ;
-        case 'dissipation'
-            dissipation = varargin{i+1}; % dissipation for all LIF neurons
+        case 'lifdissipation'
+            LIFdissipation = varargin{i+1}; % dissipation for all LIF neurons
             i=i+1 ;
-        case 'rp'
-            rp = varargin{i+1}; % refractory period (in seconds)
+        case 'lifrp'
+            LIFrp = varargin{i+1}; % refractory period (in seconds)
             i=i+1 ;
         case 'weightssupplied'
             weightssupplied = true ;
@@ -137,7 +138,13 @@ bartlettwindow = bartlettwindow/sum(bartlettwindow) ; % normalise to sum of 1
 
 % initialise the weights (or were they supplied in varargin?)
 if ~(weightssupplied) % default
-    weightarray = zeros([M, N, K]) ;
+    % initialise weights randomly within some range
+    weightarray = random('uniform', -1, +1, [M, N, K]) ;
+    % normalise weight array so that norm(i, :, :) = 1
+    for neuron = 1: M
+        weightarray(neuron, :, :) = weightarray(neuron, :, :)/norm(squeeze(weightarray(neuron, :, :))) ;
+    end
+    % weightarray = zeros([M, N, K]) ; % currently assumes only abs input, otherwise needs another K for onset, and another for offset
 else % weights were supplied
     % check dimensions of weightarray
     if ~(isequal(size(weightarray), [M, N, K]))
@@ -210,8 +217,44 @@ for i = 1:nooffiles
         r_offset_signal = r_offset_signal/mean(r_offset_signal, 'all') ;
     end
     
-    % initialise the network at the start of the sound
-    % run the network, updating the weights
+    % initialise the network at the start of each sound
+    % initialise LIF neurons: each is represented by an array representing the
+    % activity of each neuron, an array representing whether the neuron is
+    % firing, (and if we use a refractory period, an array representing the
+    % amount of time left in thar RP)
+    LIFactivity = zeros([1 M]) ; % currently initialised to 0
+    LIFfiring = zeros([1 M])  ; % nothing firing
+    LIFrefpdleft = zeros([1 M])  ; % no RP right now
+    
+    % run the network, updating the weights for firing neurons
+    
+    % number of timesteps to run is length of sound , in LIFtimeteps, less K 
+    % temporary
+    if debug
+        LIFactivities = zeros([M size(r_absSig, 2) - K]) ; % record neuron activities
+    end
+    for ts = 1:(size(r_absSig, 2) - K)
+        % calculate the incoming activity for each of the neurons
+        % W matrix is M (neurons) by B (channels) by K (timesteps), input
+        % is timesteps by B; output is M by 1
+        newLIFactivity = zeros([M 1]) ;
+        for tt = 1:K
+            newLIFactivity = newLIFactivity + squeeze(weightarray(:,:,tt)) * r_absSig(:, ts + tt -1) ;
+        end
+       
+        % calculate current activity: should the newLIFactivity be *ed by
+        % LIFtimestep?
+        LIFactivity = LIFactivity + LIFtimestep * (newLIFactivity' -  LIFdissipation * LIFactivity) ;
+        % keep it nonnegative
+        LIFactivity = max(0, LIFactivity) ;
+
+        % temporary: record neuron activities
+        if debug
+             LIFactivities(:, ts) = LIFactivity ;
+        end
+        % What's firing?
+        % update weights
+    end
     
 end
 
