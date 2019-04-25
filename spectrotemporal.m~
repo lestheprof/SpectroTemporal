@@ -22,6 +22,7 @@ N_erbs = 1 ; % default bandwidth
 MAXDURATION = 100 ; % maximal duration of a single sound file
 smoothlength = 0.01 ; % Bartlett filter parameter length of triangular (bartlett) window used to smooth
 %   rectified signal
+useabs = true ; % wilkl use the absolute value signal
 useonset = false ; % will we use onset signals in processing?
 useoffset = false ; % will we use offset signals in processing?
 % parameters for onset and offset signal generation (if used)
@@ -34,6 +35,7 @@ logonset = false ; % use log of onset/offset values
 LIFtimestep = 0.001 ; % timestep for use with LIF network
 LIFdissipation = 100 ; % dissipation, 1/tau
 LIFrp = 0.002 ; % refractory period
+LIFthreshold = 1.0 ; % LIF neuron threshold
 rptimesteps = ceil(LIFrp/LIFtimestep) ; % rp in timesteps
 % weight initialisation
 weightnorm = 1 ; % normalised value of weight
@@ -66,6 +68,9 @@ while(i<=size(varargin,2))
             i=i+1 ;
         case 'smoothlength'
             smoothlength = varargin{i+1}; % smoothing for signal
+            i=i+1 ;
+        case 'useabs'
+            useabs = varargin{i+1}; % will we use the absolute value  signal?
             i=i+1 ;
         case 'useonset'
             useonset = varargin{i+1}; % will we use the onset signal?
@@ -100,12 +105,15 @@ while(i<=size(varargin,2))
         case 'lifrp'
             LIFrp = varargin{i+1}; % refractory period (in seconds)
             i=i+1 ;
+        case 'lifthreshold'
+            LIFthreshold = varargin{i+1}; % LIF neuron threshold
+            i=i+1 ;
         case 'weightssupplied'
             weightssupplied = true ;
             weightarray  = varargin{i+1}; % supplied weights
             i=i+1 ;
         case 'weightnorm'
-            weightnorm = varargin{i+1}; % normalisation for weight
+            weightnorm = varargin{i+1}; % -weightmaxval to weightmaxval is weight range
             i=i+1 ;
         case 'k_fired'
             k_fired = varargin{i+1}; % learning rate for fired neuron
@@ -135,19 +143,38 @@ end
 bartlettlength = floor(smoothlength/dtperelement) ;
 bartlettwindow = bartlett(bartlettlength) ;
 bartlettwindow = bartlettwindow/sum(bartlettwindow) ; % normalise to sum of 1
+if ~(useabs || useonset || useoffset)
+    % no inputs are set to be used
+    disp('spectrotemporal: no input sets selected') ;
+    return  ;
+end
+% calculate size of weight array, and what goes where
+ranges = 0 ;
+if useabs
+    absrange = 1:N;
+    ranges = ranges + 1 ;
+end
+if useonset
+    onsetrange = (ranges*N + 1): (ranges+1)*N  ;
+    ranges = ranges + 1 ;
+end
+if useoffset
+    offsetrange = (ranges*N + 1): (ranges+1)*N  ;
+    ranges = ranges + 1 ;
+end
 
 % initialise the weights (or were they supplied in varargin?)
 if ~(weightssupplied) % default
     % initialise weights randomly within some range
-    weightarray = random('uniform', -1, +1, [M, N, K]) ;
-    % normalise weight array so that norm(i, :, :) = 1
+    weightarray = random('uniform', -1, +1, [M, N*ranges, K]) ;
+    % normalise weight array so that norm(i, :, :) = weightnorm
     for neuron = 1: M
-        weightarray(neuron, :, :) = weightarray(neuron, :, :)/norm(squeeze(weightarray(neuron, :, :))) ;
+        weightarray(neuron, :, :) = weightnorm * (weightarray(neuron, :, :)/norm(squeeze(weightarray(neuron, :, :)))) ;
     end
     % weightarray = zeros([M, N, K]) ; % currently assumes only abs input, otherwise needs another K for onset, and another for offset
 else % weights were supplied
     % check dimensions of weightarray
-    if ~(isequal(size(weightarray), [M, N, K]))
+    if ~(isequal(size(weightarray), [M, N*ranges, K]))
         disp(['spectrotemporal: supplied weight array and size of bandpass filter, neural array, time lapse do not agree', ...
             num2str(size(weightarray,1)), ' ' , num2str(size(weightarray,2)), ' ', num2str(size(weightarray,3))]) ;
         return ;
@@ -233,22 +260,37 @@ for i = 1:nooffiles
     if debug
         LIFactivities = zeros([M size(r_absSig, 2) - K]) ; % record neuron activities
     end
-    for ts = 1:(size(r_absSig, 2) - K)
+    for ts = 1:(size(r_absSig, 2) - K) % for each possible time step - without overlapping the end of the signal
         % calculate the incoming activity for each of the neurons
         % W matrix is M (neurons) by B (channels) by K (timesteps), input
         % is timesteps by B; output is M by 1
         newLIFactivity = zeros([M 1]) ;
         for tt = 1:K
-            newLIFactivity = newLIFactivity + squeeze(weightarray(:,:,tt)) * r_absSig(:, ts + tt -1) ;
+            if useabs
+                newLIFactivity = newLIFactivity + squeeze(weightarray(:,absrange,tt)) * r_absSig(:, ts + tt -1) ;
+            end
+            if useonset
+                newLIFactivity = newLIFactivity + squeeze(weightarray(:,onsetrange,tt)) * r_onset_signal(:, ts + tt -1) ;
+            end
+            if useoffset
+                newLIFactivity = newLIFactivity + squeeze(weightarray(:,offsetrange,tt)) * r_offset_signal(:, ts + tt -1) ;
+            end
         end
        
         % calculate current activity: should the newLIFactivity be *ed by
         % LIFtimestep?
-        LIFactivity = LIFactivity + newLIFactivity' -  LIFtimestep * (LIFdissipation * LIFactivity) ;
-         % temporary: record
+        LIFactivity = LIFactivity + LIFtimestep * (newLIFactivity' -  LIFdissipation * LIFactivity) ;
+        % keep it nonnegative
+        LIFactivity = max(0, LIFactivity) ;
+        % temporary: record neuron activities
         if debug
              LIFactivities(:, ts) = LIFactivity ;
         end
+        
+        % What's firing?        
+        % find where LIFactivity exceeds threshold
+        firingset = find(LIFactivity > LIFthreshold) ;
+        % update weights
     end
     
 end
