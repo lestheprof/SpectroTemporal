@@ -36,7 +36,7 @@ LIFtimestep = 0.001 ; % timestep for use with LIF network
 LIFdissipation = 100 ; % dissipation, 1/tau
 LIFrp = 0.002 ; % refractory period
 LIFthreshold = 1.0 ; % LIF neuron threshold
-rptimesteps = ceil(LIFrp/LIFtimestep) ; % rp in timesteps
+
 % weight initialisation
 weightnorm = 1 ; % normalised value of weight
 weightssupplied = false ; % default is to randomly initialise weights
@@ -180,6 +180,8 @@ else % weights were supplied
         return ;
     end
 end
+%put ref poeriod into timesteps
+rptimesteps = ceil(LIFrp/LIFtimestep) ; % rp in timesteps
 
 % read input_filelist to get the list of files to be processed
 inputfid = fopen([SD '/' filelistfile]) ;
@@ -287,19 +289,32 @@ for i = 1:nooffiles
         if debug
              LIFactivities(:, ts) = LIFactivity ;
         end
-        
+        % decrement refractory period 
+        inperiod = find(LIFrefpdleft > 0) ;
+        LIFrefpdleft(inperiod) = LIFrefpdleft(inperiod) - 1 ;
         % What's firing?        
         % find where LIFactivity exceeds threshold
         firingset = find(LIFactivity > LIFthreshold) ;
         for firingno = 1:length(firingset) % process firing neurons
-            LIFfiring(firingset(firingno)) = 1 ; % mark firing neurons
-            
+            if (LIFrefpdleft(firingset(firingno)) == 0) % omit refractory period neurons
+                LIFfiring(firingset(firingno)) = 1 ; % mark firing neurons
+                % reset activity
+                LIFactivity(firingset(firingno)) = 0 ;
+                LIFrefpdleft(firingset(firingno)) = rptimesteps ;
+                % temporary display firing neurons (actually shows them
+                % multiple times)
+                if debug
+                    disp(['spectrotemporal: at ' num2str(ts) ' firing ' num2str(firingset)]) ;
+                end
+            end
         end
+
         % temporary: record firing neurons
         if debug
             LIFfirings(:,ts) = LIFfiring ;
         end
-        % update weights
+        % update weights: LIFfiring contains the neurons that fired this ts
+        
     end
     
 end
