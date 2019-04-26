@@ -8,7 +8,11 @@ function weightarray = spectrotemporal(SD,filelistfile, varargin)
 %   varargin, having had a default value associated first.
 %
 % started LSS 16 April 2019
-% last updated 17 April 2019
+% last updated 26 April 2019
+% Issues with the weight initialisation and updating ensuring a fixed norm,
+% updating arithmetically results in -ve weights for non-firing neurons,
+% and +ve weights for firing neurons.
+% So let's try keeping the mean for each neuron 0 as well as norm alising. 
 debug = true ;
 % defaults
 N = 100 ; % number of bandpass channels
@@ -41,8 +45,8 @@ LIFthreshold = 1.0 ; % LIF neuron threshold
 weightnorm = 1 ; % normalised value of weight
 weightssupplied = false ; % default is to randomly initialise weights
 % weight adaptation
-k_fired = 0.1 ; % adaptation learning rate for fired neuron
-k_notfired = 0.01 ; % adaptation learnking rate for non-firing neurons
+k_fired = 0.01 ; % adaptation learning rate for fired neuron
+k_notfired = 0.001 ; % adaptation learnking rate for non-firing neurons
 
 % varargin parameter setting
 i = 1 ;
@@ -167,8 +171,9 @@ end
 if ~(weightssupplied) % default
     % initialise weights randomly within some range
     weightarray = random('uniform', -1, +1, [M, N*ranges, K]) ;
-    % normalise weight array so that norm(i, :, :) = weightnorm
+    %  updated 26 4 19: normalise weight array so that (i) mean (i, :, :) = 0 amd then norm(i, :, :) = weightnorm
     for neuron = 1: M
+        weightarray(neuron, :, :) = weightarray(neuron, :, :) - mean(weightarray(neuron, :, :), 'all') ;
         weightarray(neuron, :, :) = weightnorm * (weightarray(neuron, :, :)/norm(squeeze(weightarray(neuron, :, :)))) ;
     end
     % weightarray = zeros([M, N, K]) ; % currently assumes only abs input, otherwise needs another K for onset, and another for offset
@@ -252,7 +257,6 @@ for i = 1:nooffiles
     % firing, (and if we use a refractory period, an array representing the
     % amount of time left in thar RP)
     LIFactivity = zeros([1 M]) ; % currently initialised to 0
-    LIFfiring = zeros([1 M])  ; % nothing firing
     LIFrefpdleft = zeros([1 M])  ; % no RP right now
     
     % run the network, updating the weights for firing neurons
@@ -268,6 +272,7 @@ for i = 1:nooffiles
         % W matrix is M (neurons) by B (channels) by K (timesteps), input
         % is timesteps by B; output is M by 1
         newLIFactivity = zeros([M 1]) ;
+        LIFfiring = zeros([1 M])  ; % nothing firing
         for tt = 1:K
             if useabs
                 newLIFactivity = newLIFactivity + squeeze(weightarray(:,absrange,tt)) * r_absSig(:, ts + tt -1) ;
@@ -303,9 +308,7 @@ for i = 1:nooffiles
                 LIFrefpdleft(firingset(firingno)) = rptimesteps ;
                 % temporary display firing neurons (actually shows them
                 % multiple times)
-                if debug
-                    disp(['spectrotemporal: at ' num2str(ts) ' firing ' num2str(firingset)]) ;
-                end
+                
             end
         end
 
@@ -314,6 +317,42 @@ for i = 1:nooffiles
             LIFfirings(:,ts) = LIFfiring ;
         end
         % update weights: LIFfiring contains the neurons that fired this ts
+        if (any(LIFfiring)) % do nothing if nothing fires
+            if debug
+                   disp(['spectrotemporal: at ' num2str(ts) ' firing ' num2str(find(LIFfiring))]) ;
+            end
+            for nno = 1:M
+                if LIFfiring(nno)
+                    % neuron fired
+                    if useabs
+                        weightarray(nno, absrange, :) = weightarray(nno, absrange, :) + reshape(k_fired *  r_absSig(:, (ts + 1):(ts+K)), [1 N K]) ;
+                    end
+                    if useonset
+                        weightarray(nno, onsetrange, :) = weightarray(nno, onsetrange, :) + reshape(k_fired * r_onset_signal(:, (ts + 1):(ts+K)), [1 N K]) ;
+                    end
+                    if useoffset
+                        weightarray(nno, offsetrange, :) = weightarray(nno, offsetrange, :) + reshape(k_fired * r_offset_signal(:, (ts + 1):(ts+K)), [1 N K]) ;
+                    end
+                    % renormalise
+                    weightarray(nno, :, :) = weightarray(nno, :, :) - mean(weightarray(nno, :, :), 'all') ; % mean 0
+                    weightarray(nno, :, :) = weightnorm * (weightarray(nno, :, :)/norm(squeeze(weightarray(nno, :, :)))) ; % norm = weightnorm
+                else
+                    % neuron did not fire
+                    if useabs
+                        weightarray(nno, absrange, :) = weightarray(nno, absrange, :) - reshape(k_notfired *  r_absSig(:, (ts + 1):(ts+K)), [1 N K]) ;
+                    end
+                    if useonset
+                        weightarray(nno, onsetrange, :) = weightarray(nno, onsetrange, :) - reshape(k_notfired * r_onset_signal(:, (ts + 1):(ts+K)), [1 N K]) ;
+                    end
+                    if useoffset
+                        weightarray(nno, offsetrange, :) = weightarray(nno, offsetrange, :) - reshape(k_notfired * r_offset_signal(:, (ts + 1):(ts+K)), [1 N K]) ;
+                    end
+                    % renormalise
+                    weightarray(nno, :, :) = weightarray(nno, :, :) - mean(weightarray(nno, :, :), 'all') ; % mean 0
+                    weightarray(nno, :, :) = weightnorm * (weightarray(nno, :, :)/norm(squeeze(weightarray(nno, :, :)))) ;
+                end
+            end
+        end
         
     end
     
