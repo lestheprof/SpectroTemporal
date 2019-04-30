@@ -205,11 +205,9 @@ end
 nooffiles = nooffiles - 1 ;
 fclose(inputfid) ;
 
-% for each file...
-% process each file, one by one
-
+% for each file...% process each file, one by one
 for i = 1:nooffiles
-    % read the sound and bandpass the signal (gammatone filterbank)
+    % read the sound and bandpass the signal
     [bmSig, sig, fs, datalength, cochCFs, delayVector] = ...
         bmsigmono([SD '/' filelist{i}], N, minCochFreq, maxCochFreq, MAXDURATION, 'gamma', N_erbs) ;
     if (Fs ~= fs)
@@ -228,7 +226,6 @@ for i = 1:nooffiles
     end
     % possibly calculate the onset signal for each band
     % possibly calculate the offset signal for each band
-    % could add other transforms as well
     if useonset
         onset_signal = abs(max(0,ooSig)) ; % onset signal, positive or 0, 1 per band
     end
@@ -245,11 +242,10 @@ for i = 1:nooffiles
         absSig = log(absSig) ;
     end
     % repackage the inputs into buckets of length LIFtimestep
-    if useabs
-        r_absSig = resample(absSig', 1, floor(LIFtimestep * fs) )' ;
-        % normalise: adjust all to mean of 1
-        r_absSig = r_absSig/mean(r_absSig, 'all') ;
-    end
+    % always do absSig
+    r_absSig = resample(absSig', 1, floor(LIFtimestep * fs) )' ;
+    % normalise: adjust all to mean of 1
+    r_absSig = r_absSig/mean(r_absSig, 'all') ;
     if useonset % only do onset if it's to be used
         r_onset_signal = resample(onset_signal', 1, floor(LIFtimestep * fs) )' ;
         r_onset_signal = r_onset_signal/mean(r_onset_signal, 'all') ;
