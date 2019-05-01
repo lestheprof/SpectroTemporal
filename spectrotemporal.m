@@ -308,15 +308,13 @@ for i = 1:nooffiles
         % What's firing?        
         % find where LIFactivity exceeds threshold
         firingset = find(LIFactivity > LIFthreshold) ;
+        % reset activity
+        LIFactivity(firingset) = 0 ; % should be done throughout - or at end of - refractory period. 
+
         for firingno = 1:length(firingset) % process firing neurons
             if (LIFrefpdleft(firingset(firingno)) == 0) % omit refractory period neurons
-                LIFfiring(firingset(firingno)) = 1 ; % mark firing neurons
-                % reset activity
-                LIFactivity(firingset(firingno)) = 0 ;
-                LIFrefpdleft(firingset(firingno)) = rptimesteps ;
-                % temporary display firing neurons (actually shows them
-                % multiple times)
-                
+                LIFfiring(firingset(firingno)) = 1 ; % mark firing neurons: exclude thore in refractory period
+                LIFrefpdleft(firingset(firingno)) = rptimesteps ; % set refractory period timer
             end
         end
 
