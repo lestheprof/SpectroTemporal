@@ -52,6 +52,7 @@ weightssupplied = false ; % default is to randomly initialise weights
 % weight adaptation
 k_fired = 0.01 ; % adaptation learning rate for fired neuron
 k_notfired = 0.001 ; % adaptation learnking rate for non-firing neurons
+singleupdate = true ; % update only first firing neuron at any time step
 
 % varargin parameter setting
 i = 1 ;
@@ -129,6 +130,9 @@ while(i<=size(varargin,2))
             i=i+1 ;
         case 'k_notfired'
             k_notfired = varargin{i+1}; % learning rate for neurons not firing
+            i=i+1 ;
+        case 'singleupdate'
+            singleupdate = varargin{i+1}; % if true update only first neuron to fire at any time step
             i=i+1 ;
             
         otherwise
@@ -356,6 +360,9 @@ for i = 1:nooffiles
                     % renormalise
                     weightarray(nno, :, :) = weightarray(nno, :, :) - mean(weightarray(nno, :, :), 'all') ; % mean 0
                     weightarray(nno, :, :) = weightnorm * (weightarray(nno, :, :)/norm(squeeze(weightarray(nno, :, :)))) ;
+                end
+                if (singleupdate && LIFfiring(nno)) 
+                    break ; % only upodate the firing from a single neuron
                 end
             end
         end
