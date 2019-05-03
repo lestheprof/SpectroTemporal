@@ -58,6 +58,9 @@ singleupdate = true ; % update only first firing neuron at any time step
 i = 1 ;
 while(i<=size(varargin,2))
     switch lower(varargin{i})
+        case 'debug' 
+            debug = varargin{i+1};
+            i=i+1 ;
         case 'fs' % sampling rate
             Fs = varargin{i+1};
             i=i+1 ;
