@@ -1,23 +1,17 @@
 
 [x, hname] = system('hostname');
-hname = deblank(hname) ;
-if (strcmp(hname,'Leslie-Smiths-MacBook-Pro.local'))
-    laptop = true;
-else
-    laptop = false ;
-end
-    
-    
-    
-if laptop
-    f101dir = '../SoundStimuli_2019/f101' ;
-    m102dir = '../SoundStimuli_2019/m102' ;
-else
-    if peseta
+hname = deblank(hname);
+switch hname
+    case 'peseta.cs.stir.ac.uk'
         f101dir = '/Volumes/Extra/AllenCorpus/AllenCorpus/f101' ;
         m102dir = '/Volumes/Extra/AllenCorpus/AllenCorpus/m102' ;
-    end
+    case 'Leslie-Smiths-MacBook-Pro.local'
+        f101dir = '../SoundStimuli_2019/f101' ;
+        m102dir = '../SoundStimuli_2019/m102' ;
+    otherwise
+        disp('Computer name not known: add paths to case statement') ;
 end
+
 % from using params1.m, <2, 1> seemed good: that is,
 % kf = 0.00015, knf = 0.00001.
 % this one looks at the time overall. 
@@ -28,7 +22,7 @@ k_notfired = 0.00001 ;
 ktimestep = 0 ;
 kdissipation = 0 ;
 weightnorm = 4 ;
-debug = true ;
+debug = false ;
 for LIFtimestep = 0.005:0.01:0.025
     ktimestep = ktimestep + 1 ;
     for LIFdissipation = 20:40:100
@@ -38,11 +32,11 @@ for LIFtimestep = 0.005:0.01:0.025
             disp(['LIF_timestep = ' num2str(LIFtimestep) 'LIF_dissipation = ' num2str(LIFdissipation)]) ;
         end
         LIFrp = LIFrpMultiplier * LIFtimestep ;
-        f101_2a = spectrotemporal(f101dir, 'allfiles_10.txt', 'fs', 16000, 'useabs', true, ...
+        f101_2a = spectrotemporal(f101dir, 'filelist_all.txt', 'fs', 16000, 'useabs', true, ...
             'useonset', false, 'useoffset', false, 'weightnorm', weightnorm, 'LIFrp', 10 * LIFtimestep, ...
             'k_fired', k_fired, 'k_notfired', k_notfired, 'M', 5, 'liftimestep', LIFtimestep, ...
             'lifdissipation', LIFdissipation, 'debug', debug) ;
-        m102_2a = spectrotemporal(m102dir, 'allfiles_10.txt', 'fs', 16000, 'useabs', true, ...
+        m102_2a = spectrotemporal(m102dir, 'filelist_all.txt', 'fs', 16000, 'useabs', true, ...
             'useonset', false, 'useoffset', false, 'weightnorm', weightnorm, 'LIFrp', 10 * LIFtimestep, ...
             'k_fired', k_fired, 'k_notfired', k_notfired, 'M', 5, 'liftimestep', LIFtimestep, ...
             'lifdissipation', LIFdissipation, 'debug', debug) ;
