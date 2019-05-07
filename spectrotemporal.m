@@ -216,6 +216,9 @@ fclose(inputfid) ;
 % process each file, one by one
 
 for i = 1:nooffiles
+    if debug
+        disp(['Processing file ' filelist{i}]) ;
+    end
     % read the sound and bandpass the signal (gammatone filterbank)
     [bmSig, sig, fs, datalength, cochCFs, delayVector] = ...
         bmsigmono([SD '/' filelist{i}], N, minCochFreq, maxCochFreq, MAXDURATION, 'gamma', N_erbs) ;
