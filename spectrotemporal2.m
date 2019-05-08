@@ -330,7 +330,7 @@ for i = 1:nooffiles
                     neuronactivity = 0 ;
                     for tt = 1:K
                         neuronactivity =  neuronactivity + ...
-                            squeeze(existingweights(existingneuron,absrange,tt)) .* r_absSig(:, ts+ tt -1) ; % matrix mult: had to be unwound
+                            squeeze(existingweights(existingneuron,absrange,tt)) * r_absSig(:, ts+ tt -1) ; % matrix mult: had to be unwound
                     end
                     feedback = neuronactivity * squeeze(existingweights(existingneuron,absrange,:)) ;
                     n_absSig = n_absSig - feedback ;
@@ -342,7 +342,7 @@ for i = 1:nooffiles
                     neuronactivity = 0 ;
                     for tt = 1:K
                         neuronactivity =  neuronactivity + ...
-                            squeeze(existingweights(existingneuron,onsetrange,tt)) .* r_onset_signal(:, ts+ tt -1) ; % matrix mult: had to be unwound
+                            squeeze(existingweights(existingneuron,onsetrange,tt)) * r_onset_signal(:, ts+ tt -1) ; % matrix mult: had to be unwound
                     end
                     feedback = neuronactivity * squeeze(existingweights(existingneuron,onsetrange,:)) ;
                     n_onset_signal = n_onset_signal - feedback ;
@@ -354,7 +354,7 @@ for i = 1:nooffiles
                     neuronactivity = 0 ;
                     for tt = 1:K
                         neuronactivity =  neuronactivity + ...
-                            squeeze(existingweights(existingneuron,offsetrange,tt)) .* r_offset_signal(:, ts+ tt -1) ; % matrix mult: had to be unwound
+                            squeeze(existingweights(existingneuron,offsetrange,tt)) * r_offset_signal(:, ts+ tt -1) ; % matrix mult: had to be unwound
                     end
                     feedback = neuronactivity * squeeze(existingweights(existingneuron,offsetrange,:)) ;
                     n_offset_signal = n_offset_signal - feedback ;
