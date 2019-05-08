@@ -53,7 +53,7 @@ weightnorm = 1 ; % normalised value of weight
 weightssupplied = false ; % default is to randomly initialise weights
 % weight adaptation
 k_fired = 0.01 ; % adaptation learning rate for fired neuron
-k_notfired = 0.001 ; % adaptation learnking rate for non-firing neurons
+k_notfired = 0.001 ; % adaptation learnking rate for non-firing neurons: not used
 singleupdate = true ; % update only first firing neuron at any time step
 
 % values related to adapting neurons one by one
@@ -165,7 +165,7 @@ dtperelement = 1.0/Fs ; % sampling interval
 wholegaussian = diffofgaussians(sigma1, sigma1 * sigmaratio, nsamples * 2 + 1,dtperelement) ;
 hdog = wholegaussian(nsamples: end) ;
 if (debug)
-    disp(['spectrotemporal: sum of half difference of Guassians = ' num2str(sum(hdog))]) ;
+    disp(['spectrotemporal2: sum of half difference of Guassians = ' num2str(sum(hdog))]) ;
 end
 % Calculate smoothing for signal
 bartlettlength = floor(smoothlength/dtperelement) ;
@@ -248,7 +248,7 @@ for i = 1:nooffiles
     [bmSig, sig, fs, datalength, cochCFs, delayVector] = ...
         bmsigmono([SD '/' filelist{i}], N, minCochFreq, maxCochFreq, MAXDURATION, 'gamma', N_erbs) ;
     if (Fs ~= fs)
-        disp(['spectrotemporal: provided sample rate = ' num2str(Fs) ' differs from sound sample rate = ' num2str(fs)]) ;
+        disp(['spectrotemporal2: provided sample rate = ' num2str(Fs) ' differs from sound sample rate = ' num2str(fs)]) ;
     end
     % calculate the smoothed absolute signal for each band
     absSig = zeros(size(bmSig)) ; % initialise
@@ -337,8 +337,28 @@ for i = 1:nooffiles
                 end
             end
             if useonset
+                n_onset_signal = r_onset_signal(:, ts : ts+K-1) ;
+                for existingneuron = 1:n_existing
+                    neuronactivity = 0 ;
+                    for tt = 1:K
+                        neuronactivity =  neuronactivity + ...
+                            squeeze(existingweights(existingneuron,onsetrange,tt)) .* r_onset_signal(:, ts+ tt -1) ; % matrix mult: had to be unwound
+                    end
+                    feedback = neuronactivity * squeeze(existingweights(existingneuron,onsetrange,:)) ;
+                    n_onset_signal = n_onset_signal - feedback ;
+                end
             end
             if useoffset
+                n_offset_signal = r_offset_signal(:, ts+K-1) ;
+                for existingneuron = 1:n_existing
+                    neuronactivity = 0 ;
+                    for tt = 1:K
+                        neuronactivity =  neuronactivity + ...
+                            squeeze(existingweights(existingneuron,offsetrange,tt)) .* r_offset_signal(:, ts+ tt -1) ; % matrix mult: had to be unwound
+                    end
+                    feedback = neuronactivity * squeeze(existingweights(existingneuron,offsetrange,:)) ;
+                    n_offset_signal = n_offset_signal - feedback ;
+                end
             end
         end
         if firstneuron
@@ -359,8 +379,10 @@ for i = 1:nooffiles
                     newLIFactivity = newLIFactivity + squeeze(weightarray(:,absrange,tt)) * n_absSig(:, tt) ;
                 end
                 if useonset
+                    newLIFactivity = newLIFactivity + squeeze(weightarray(:,onsetrange,tt)) * n_onset_signal(:, tt) ;
                 end
                 if useoffset
+                    newLIFactivity = newLIFactivity + squeeze(weightarray(:,offsetrange,tt)) * n_offset_signal(:, tt) ;
                 end
             end
         end
@@ -397,7 +419,7 @@ for i = 1:nooffiles
         % update weights: LIFfiring contains the neurons that fired this ts
         if (any(LIFfiring)) % do nothing if nothing fires
             if debug
-                disp(['spectrotemporal: at ' num2str(ts) ' firing ' num2str(find(LIFfiring))]) ;
+                disp(['spectrotemporal2: at ' num2str(ts) ' firing ' num2str(find(LIFfiring))]) ;
             end
             if firstneuron
                 for nno = 1:M
@@ -445,15 +467,15 @@ for i = 1:nooffiles
                             weightarray(nno, absrange, :) = weightarray(nno, absrange, :) + reshape(k_fired *  n_absSig, [1 N K]) ;
                         end
                         if useonset
-                            weightarray(nno, onsetrange, :) = weightarray(nno, onsetrange, :) + reshape(k_fired * r_onset_signal(:, (ts + 1):(ts+K)), [1 N K]) ;
+                            weightarray(nno, onsetrange, :) = weightarray(nno, onsetrange, :) + reshape(k_fired * n_onset_signal, [1 N K]) ;
                         end
                         if useoffset
-                            weightarray(nno, offsetrange, :) = weightarray(nno, offsetrange, :) + reshape(k_fired * r_offset_signal(:, (ts + 1):(ts+K)), [1 N K]) ;
+                            weightarray(nno, offsetrange, :) = weightarray(nno, offsetrange, :) + reshape(k_fired * n_offset_signal, [1 N K]) ;
                         end
                         % renormalise
                         weightarray(nno, :, :) = weightarray(nno, :, :) - mean(weightarray(nno, :, :), 'all') ; % mean 0
                         weightarray(nno, :, :) = weightnorm * (weightarray(nno, :, :)/norm(squeeze(weightarray(nno, :, :)))) ; % norm = weightnorm
-                    end
+                    end % no need for else here as we train one neuron at a time
                 end
             end
         end
