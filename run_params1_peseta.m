@@ -15,7 +15,7 @@ for k_fired = 0.0001:0.00005:0.0003
             'lifdissipation', 20, 'debug', false) ;
         % save files
         save([f101dir '/' 'aaarun_' fname], 'f101_2', 'k_fired', 'k_notfired')  ;
-        save([m102dir '/' 'aaarun_' fname], 'f101_2', 'k_fired', 'k_notfired')  ;
+        save([m102dir '/' 'aaarun_' fname], 'm101_2', 'k_fired', 'k_notfired')  ;
        
         knf = knf + 1 ;
     end

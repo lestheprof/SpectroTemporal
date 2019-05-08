@@ -22,9 +22,10 @@ k_notfired = 0.00001 ;
 ktimestep = 0 ;
 kdissipation = 0 ;
 weightnorm = 4 ;
-debug = false ;
+debug = true ;
 for LIFtimestep = 0.005:0.01:0.025
     ktimestep = ktimestep + 1 ;
+    kdissipation = 0 ;
     for LIFdissipation = 20:40:100
         kdissipation = kdissipation + 1 ;
         fname = [num2str(ktimestep) '_' num2str(kdissipation) '.mat'] ;
@@ -32,16 +33,16 @@ for LIFtimestep = 0.005:0.01:0.025
             disp(['LIF_timestep = ' num2str(LIFtimestep) 'LIF_dissipation = ' num2str(LIFdissipation)]) ;
         end
         LIFrp = LIFrpMultiplier * LIFtimestep ;
-        f101_2a = spectrotemporal(f101dir, 'filelist_all.txt', 'fs', 16000, 'useabs', true, ...
+        f101_2a = spectrotemporal(f101dir, 'filelist_10.txt', 'fs', 16000, 'useabs', true, ...
             'useonset', false, 'useoffset', false, 'weightnorm', weightnorm, 'LIFrp', 10 * LIFtimestep, ...
             'k_fired', k_fired, 'k_notfired', k_notfired, 'M', 5, 'liftimestep', LIFtimestep, ...
             'lifdissipation', LIFdissipation, 'debug', debug) ;
-        m102_2a = spectrotemporal(m102dir, 'filelist_all.txt', 'fs', 16000, 'useabs', true, ...
+        m102_2a = spectrotemporal(m102dir, 'filelist_10.txt', 'fs', 16000, 'useabs', true, ...
             'useonset', false, 'useoffset', false, 'weightnorm', weightnorm, 'LIFrp', 10 * LIFtimestep, ...
             'k_fired', k_fired, 'k_notfired', k_notfired, 'M', 5, 'liftimestep', LIFtimestep, ...
             'lifdissipation', LIFdissipation, 'debug', debug) ;
         % save files
         save([f101dir '/' 'run2_' fname], 'f101_2', 'k_fired', 'k_notfired', 'LIFtimestep', 'LIFdissipation','weightnorm', 'LIFrp')  ;
-        save([m102dir '/' 'run2_' fname], 'f101_2', 'k_fired', 'k_notfired', 'LIFtimestep', 'LIFdissipation','weightnorm', 'LIFrp')  ;
+        save([m102dir '/' 'run2_' fname], 'm101_2', 'k_fired', 'k_notfired', 'LIFtimestep', 'LIFdissipation','weightnorm', 'LIFrp')  ;
     end
 end
