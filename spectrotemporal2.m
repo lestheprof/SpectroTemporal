@@ -60,6 +60,7 @@ singleupdate = true ; % update only first firing neuron at any time step
 firstneuron = true ; % true if this is the first neuron to be trained
 % it will be set to false if not, and, in that case, there will be a value
 % in existingweights
+posonly = true ; % use only the positive parts of signals after feedback
 
 
 % varargin parameter setting
@@ -148,6 +149,9 @@ while(i<=size(varargin,2))
         case 'existingweights'
             existingweights  = varargin{i+1}; % existing weights from previously adapted neurons
             firstneuron = false ;
+            i=i+1 ;
+        case 'posonly'
+            posonly = varargin{i+1}; % if true (default) use on ly the positive-going parts of signals after feedback
             i=i+1 ;
             
         otherwise
@@ -277,7 +281,7 @@ for i = 1:nooffiles
         end
     end
     if logabs
-        absSig = log(absSig) ;
+        absSig = log(1+absSig) ;
     end
     % repackage the inputs into buckets of length LIFtimestep
     if useabs
@@ -335,6 +339,9 @@ for i = 1:nooffiles
                     feedback = neuronactivity * squeeze(existingweights(existingneuron,absrange,:)) ;
                     n_absSig = n_absSig - feedback ;
                 end
+                if posonly
+                    n_absSig = max(n_absSig, 0) ;
+                end
             end
             if useonset
                 n_onset_signal = r_onset_signal(:, ts : ts+K-1) ;
@@ -347,6 +354,9 @@ for i = 1:nooffiles
                     feedback = neuronactivity * squeeze(existingweights(existingneuron,onsetrange,:)) ;
                     n_onset_signal = n_onset_signal - feedback ;
                 end
+                if posonly
+                    n_onset_signal = max(0, n_onset_signal) ;
+                end
             end
             if useoffset
                 n_offset_signal = r_offset_signal(:, ts+K-1) ;
@@ -358,6 +368,9 @@ for i = 1:nooffiles
                     end
                     feedback = neuronactivity * squeeze(existingweights(existingneuron,offsetrange,:)) ;
                     n_offset_signal = n_offset_signal - feedback ;
+                end
+                if posonly
+                    n_offset_signal = max(0, n_offset_signal) ;
                 end
             end
         end
