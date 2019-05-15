@@ -50,6 +50,7 @@ LIFthreshold = 1.0 ; % LIF neuron threshold
 
 % weight initialisation
 weightnorm = 1 ; % normalised value of weight
+weightarray = [] ;
 weightssupplied = false ; % default is to randomly initialise weights
 % weight adaptation
 k_fired = 0.01 ; % adaptation learning rate for fired neuron
@@ -84,6 +85,9 @@ while(i<=size(varargin,2))
             i=i+1 ;
         case 'n'
             N = varargin{i+1}; % number of bandpass channels
+            i=i+1 ;
+        case 'k'
+            K = varargin{i+1}; % number of timesteps
             i=i+1 ;
         case 'maxduration'
             MAXDURATION = varargin{i+1}; % maximal duration of a single sound file
@@ -131,8 +135,12 @@ while(i<=size(varargin,2))
             LIFthreshold = varargin{i+1}; % LIF neuron threshold
             i=i+1 ;
         case 'weightssupplied'
-            weightssupplied = true ;
             weightarray  = varargin{i+1}; % supplied weights
+            if isempty(weightarray)
+                weightssupplied = false ;
+            else
+                weightssupplied = true;
+            end
             i=i+1 ;
         case 'weightnorm'
             weightnorm = varargin{i+1}; % -weightmaxval to weightmaxval is weight range
