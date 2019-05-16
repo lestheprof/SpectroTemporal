@@ -57,6 +57,7 @@ LIFthreshold = 1.0 ; % LIF neuron threshold
 % weight initialisation
 weightnorm1 = 4 ; % normalised value of weight
 weightnormsubseq = 8 ;
+weightnormtype = 1 ;
 weightarray = [] ; % if weightarray stays null, weights will be initialised randomly
 % this could allow all the neurons to be initialised to the same weight
 % values
@@ -144,6 +145,9 @@ while(i<=size(varargin,2))
         case 'weightnormsubseq'
             weightnormsubseq = varargin{i+1}; % -weightmaxval to weightmaxval is weight range
             i=i+1 ;
+        case 'weightnormtype'
+            weightnormtype = varargin{i+1}; % -weightmaxval to weightmaxval is weight range
+            i=i+1 ;
         case 'k_fired'
             k_fired = varargin{i+1}; % learning rate for fired neuron
             i=i+1 ;
@@ -165,14 +169,14 @@ weights(1,:,:) = spectrotemporal2(filedir, filelist, 'fs', Fs, 'mincochfreq',min
     'smoothlength', smoothlength, 'useabs', useabs, 'logabs', logabs, 'logonset', logonset, ...
     'useonset', useonset, 'useoffset', useoffset, 'weightssupplied', weightarray, 'weightnorm', weightnorm1, 'LIFrp', LIFrp, ...
     'k_fired', k_fired, 'liftimestep', LIFtimestep,'LIFthreshold', LIFthreshold,  ...
-    'lifdissipation', LIFdissipation, 'posonly', posonly, 'debug', debug) ;
+    'lifdissipation', LIFdissipation, 'posonly', posonly, 'weightnormtype', weightnormtype, 'debug', debug) ;
 for compno = 2:ncomponents
     weights(compno,:,:) = spectrotemporal2(filedir, filelist, 'fs', Fs, 'mincochfreq',minCochFreq, ...
     'maxCochFreq', maxCochFreq, 'N_erbs', N_erbs, 'N', N, 'K', K, 'maxduration', MAXDURATION, ...
     'smoothlength', smoothlength, 'useabs', useabs, 'logabs', logabs, 'logonset', logonset, ...
     'useonset', useonset, 'useoffset', useoffset, 'weightssupplied', weightarray, 'weightnorm', weightnormsubseq, 'LIFrp', LIFrp, ...
     'k_fired', k_fired, 'liftimestep', LIFtimestep,'LIFthreshold', LIFthreshold,  ...
-    'lifdissipation', LIFdissipation, 'posonly', posonly, 'debug', debug, 'existingweights', weights(1:compno-1,:,:)) ;
+    'lifdissipation', LIFdissipation, 'posonly', posonly, 'debug', debug, 'weightnormtype', weightnormtype, 'existingweights', weights(1:compno-1,:,:)) ;
     
 end
 end
