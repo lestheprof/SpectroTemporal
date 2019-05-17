@@ -50,6 +50,7 @@ LIFthreshold = 1.0 ; % LIF neuron threshold
 
 % weight initialisation
 weightnorm = 1 ; % normalised value of weight
+weightnormtype = 1; % 1 is mean 0, norm = weight norm; 2 is all nonneg.
 weightarray = [] ;
 weightssupplied = false ; % default is to randomly initialise weights
 % weight adaptation
@@ -143,7 +144,10 @@ while(i<=size(varargin,2))
             end
             i=i+1 ;
         case 'weightnorm'
-            weightnorm = varargin{i+1}; % -weightmaxval to weightmaxval is weight range
+            weightnorm = varargin{i+1}; % -weightmaxval to weightmaxval is weight range if weightnotmtype is 1
+            i=i+1 ; % but 0 to wieghtmaxval if weightnormtype  == 2
+        case 'weightnormtype'
+            weightnormtype = varargin{i+1}; % -weightmaxval to weightmaxval is weight range
             i=i+1 ;
         case 'k_fired'
             k_fired = varargin{i+1}; % learning rate for fired neuron
@@ -205,12 +209,23 @@ end
 
 % initialise the weights (or were they supplied in varargin?)
 if ~(weightssupplied) % default
+    if (weightnormtype == 1)
     % initialise weights randomly within some range
     weightarray = random('uniform', -1, +1, [M, N*ranges, K]) ;
     %  updated 26 4 19: normalise weight array so that  mean (i, :, :) = 0 and then norm(i, :, :) = weightnorm
     for neuron = 1: M
         weightarray(neuron, :, :) = weightarray(neuron, :, :) - mean(weightarray(neuron, :, :), 'all') ;
         weightarray(neuron, :, :) = weightnorm * (weightarray(neuron, :, :)/norm(squeeze(weightarray(neuron, :, :)))) ;
+    end
+    else
+        if weightnormtype == 2 % nonnegative weights
+            % initialise weights randomly within some range
+            weightarray = random('uniform', 0, +1, [M, N*ranges, K]) ;
+            for neuron = 1: M
+                % weightarray(neuron, :, :) = weightarray(neuron, :, :) - mean(weightarray(neuron, :, :), 'all') ;
+                weightarray(neuron, :, :) = weightnorm * (weightarray(neuron, :, :)/norm(squeeze(weightarray(neuron, :, :)))) ;
+            end
+        end
     end
 else % weights were supplied
     % check dimensions of weightarray
@@ -344,8 +359,11 @@ for i = 1:nooffiles
                         neuronactivity =  neuronactivity + ...
                             squeeze(existingweights(existingneuron,absrange,tt)) * r_absSig(:, ts+ tt -1) ; % matrix mult: had to be unwound
                     end
+                    if (K==1)
+                        % need to treat feedback differently if
+                        % 1-dimensional in last i
                     feedback = neuronactivity * squeeze(existingweights(existingneuron,absrange,:)) ;
-                    n_absSig = n_absSig - feedback ;
+                    n_absSig = n_absSig - feedback ; %  issue when K==1: feedback is 1 by 100 instead of 100 by 1
                 end
                 if posonly
                     n_absSig = max(n_absSig, 0) ;
@@ -456,8 +474,14 @@ for i = 1:nooffiles
                             weightarray(nno, offsetrange, :) = weightarray(nno, offsetrange, :) + reshape(k_fired * r_offset_signal(:, (ts + 1):(ts+K)), [1 N K]) ;
                         end
                         % renormalise
+                        if weightnormtype == 1
                         weightarray(nno, :, :) = weightarray(nno, :, :) - mean(weightarray(nno, :, :), 'all') ; % mean 0
                         weightarray(nno, :, :) = weightnorm * (weightarray(nno, :, :)/norm(squeeze(weightarray(nno, :, :)))) ; % norm = weightnorm
+                        else if weightnormtype == 2
+                               weightarray(nno, :, :) = max(0, weightarray(nno, :, :)) ; 
+                               weightarray(nno, :, :) = weightnorm * (weightarray(nno, :, :)/norm(squeeze(weightarray(nno, :, :)))) ; % norm = weightnorm
+                            end
+                        end
                     else
                         % neuron did not fire
                         % we should not get to here if M is 1
@@ -472,8 +496,15 @@ for i = 1:nooffiles
                             weightarray(nno, offsetrange, :) = weightarray(nno, offsetrange, :) - reshape(k_notfired * r_offset_signal(:, (ts + 1):(ts+K)), [1 N K]) ;
                         end
                         % renormalise
+                        if weightnormtype == 1
                         weightarray(nno, :, :) = weightarray(nno, :, :) - mean(weightarray(nno, :, :), 'all') ; % mean 0
                         weightarray(nno, :, :) = weightnorm * (weightarray(nno, :, :)/norm(squeeze(weightarray(nno, :, :)))) ;
+                        else
+                            if weightnormtype == 2
+                               weightarray(nno, :, :) = max(0, weightarray(nno, :, :)) ; 
+                               weightarray(nno, :, :) = weightnorm * (weightarray(nno, :, :)/norm(squeeze(weightarray(nno, :, :)))) ; % norm = weightnorm
+                            end
+                        end
                     end
                     if (singleupdate && LIFfiring(nno))
                         break ; % only upodate the firing from a single neuron
@@ -494,8 +525,15 @@ for i = 1:nooffiles
                             weightarray(nno, offsetrange, :) = weightarray(nno, offsetrange, :) + reshape(k_fired * n_offset_signal, [1 N K]) ;
                         end
                         % renormalise
+                        if weightnormtype == 1
                         weightarray(nno, :, :) = weightarray(nno, :, :) - mean(weightarray(nno, :, :), 'all') ; % mean 0
-                        weightarray(nno, :, :) = weightnorm * (weightarray(nno, :, :)/norm(squeeze(weightarray(nno, :, :)))) ; % norm = weightnorm
+                        weightarray(nno, :, :) = weightnorm * (weightarray(nno, :, :)/norm(squeeze(weightarray(nno, :, :)))) ;
+                        else
+                            if weightnormtype == 2
+                               weightarray(nno, :, :) = max(0, weightarray(nno, :, :)) ; 
+                               weightarray(nno, :, :) = weightnorm * (weightarray(nno, :, :)/norm(squeeze(weightarray(nno, :, :)))) ; % norm = weightnorm
+                            end
+                        end
                     end % no need for else here as we train one neuron at a time
                 end
             end

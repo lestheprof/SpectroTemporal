@@ -359,7 +359,13 @@ for i = 1:nooffiles
                         neuronactivity =  neuronactivity + ...
                             squeeze(existingweights(existingneuron,absrange,tt)) * r_absSig(:, ts+ tt -1) ; % matrix mult: had to be unwound
                     end
-                    feedback = neuronactivity * squeeze(existingweights(existingneuron,absrange,:)) ;
+                    if (K==1)
+                        % need to treat feedback differently if
+                        % 1-dimensional in last index
+                        feedback = neuronactivity * squeeze(existingweights(existingneuron,absrange,:))' ;
+                    else
+                        feedback = neuronactivity * squeeze(existingweights(existingneuron,absrange,:)) ;
+                    end
                     n_absSig = n_absSig - feedback ; %  issue when K==1: feedback is 1 by 100 instead of 100 by 1
                 end
                 if posonly
@@ -374,7 +380,13 @@ for i = 1:nooffiles
                         neuronactivity =  neuronactivity + ...
                             squeeze(existingweights(existingneuron,onsetrange,tt)) * r_onset_signal(:, ts+ tt -1) ; % matrix mult: had to be unwound
                     end
-                    feedback = neuronactivity * squeeze(existingweights(existingneuron,onsetrange,:)) ;
+                    if (K==1)
+                        % need to treat feedback differently if
+                        % 1-dimensional in last index
+                        feedback = neuronactivity * squeeze(existingweights(existingneuron,onsetrange,:))' ;
+                    else
+                        feedback = neuronactivity * squeeze(existingweights(existingneuron,onsetrange,:)) ;
+                    end
                     n_onset_signal = n_onset_signal - feedback ;
                 end
                 if posonly
@@ -389,7 +401,13 @@ for i = 1:nooffiles
                         neuronactivity =  neuronactivity + ...
                             squeeze(existingweights(existingneuron,offsetrange,tt)) * r_offset_signal(:, ts+ tt -1) ; % matrix mult: had to be unwound
                     end
-                    feedback = neuronactivity * squeeze(existingweights(existingneuron,offsetrange,:)) ;
+                    if (K==1)
+                        % need to treat feedback differently if
+                        % 1-dimensional in last index
+                        feedback = neuronactivity * squeeze(existingweights(existingneuron,offsetrange,:))' ;
+                    else
+                        feedback = neuronactivity * squeeze(existingweights(existingneuron,offsetrange,:)) ;
+                    end
                     n_offset_signal = n_offset_signal - feedback ;
                 end
                 if posonly
