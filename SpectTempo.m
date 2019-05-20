@@ -1,4 +1,4 @@
-function weights = SpectTempo(filedir, filelist, ncomponents,  varargin)
+function [weights, params] = SpectTempo(filedir, filelist, ncomponents,  varargin)
 % SpectTempo finds the spectrotemporal components one by one, subtracting
 % the back-projection  of those already found.
 % aim is an industrial-strength component finder.
@@ -154,7 +154,7 @@ while(i<=size(varargin,2))
             k_fired = varargin{i+1}; % learning rate for fired neuron
             i=i+1 ;
         case 'posonly'
-            posonly = varargin{i+1}; % if true (default) use on ly the positive-going parts of signals after feedback
+            posonly = varargin{i+1}; % if true (default) use only the positive-going parts of signals after feedback
             i=i+1 ;
             
         otherwise
@@ -182,4 +182,29 @@ for compno = 2:ncomponents
     
 end
 % create a structure with all the parameters for returning
+params.filedir = filedir ;
+params.filelist = filelist ;
+params.Fs = Fs ;
+params.minCochFreq = minCochFreq ;
+params.maxCochFreq = maxCochFreq ;
+params.N_erbs = N_erbs ;
+params.N = N ;
+params.K = K ;
+params.maxduration = MAXDURATION ;
+params.smoothlength = smoothlength ;
+params.useabs = useabs ;
+params.logabs = logabs ;
+params.logonset = logonset ;
+params.useonset = useonset ;
+params.useoffset = useoffset ;
+params.weightnorm1 = weightnorm1 ;
+params.LIFrp = LIFrp ;
+params.k_fired = k_fired ;
+params.LIFtimestep = LIFtimestep ;
+params.LIFthreshold = LIFthreshold ;
+params.LIFdissipation = LIFdissipation ;
+params.posonly = posonly ;
+params.weightnormtype = weightnormtype ;
+
+
 end

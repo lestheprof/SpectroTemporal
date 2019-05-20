@@ -3,6 +3,8 @@ function weights = SpectTempo(filedir, filelist, ncomponents,  varargin)
 % the back-projection  of those already found.
 % aim is an industrial-strength component finder.
 % also would be good to put segmentation in as an option.
+% also would be good to return a structure with all the paramters for use in
+% re-creating the results.
 %
 % parameters: filedir: directory where the files are to be found
 % filelist: name of file with list of files to be run
@@ -56,11 +58,14 @@ LIFthreshold = 1.0 ; % LIF neuron threshold
 
 % weight initialisation
 weightnorm1 = 4 ; % normalised value of weight
-weightnormsubseq = 8
-weightssupplied = false ; % default is to randomly initialise weights
+weightnormsubseq = 8 ;
+weightnormtype = 1 ;
+weightarray = [] ; % if weightarray stays null, weights will be initialised randomly
+% this could allow all the neurons to be initialised to the same weight
+% values
 % weight adaptation
 k_fired = 0.01 ; % adaptation learning rate for fired neuron
-singleupdate = true ; % update only first firing neuron at any time step
+posonly = true ; % use only positive values in signals 
 
 
 % varargin parameter setting
@@ -133,11 +138,17 @@ while(i<=size(varargin,2))
         case 'lifthreshold'
             LIFthreshold = varargin{i+1}; % LIF neuron threshold
             i=i+1 ;
+        case 'weightssupplied'
+            weightarray  = varargin{i+1}; % supplied weights
+            i=i+1 ;
         case 'weightnorm1'
             weightnorm1 = varargin{i+1}; % -weightmaxval to weightmaxval is weight range
             i=i+1 ;
         case 'weightnormsubseq'
             weightnormsubseq = varargin{i+1}; % -weightmaxval to weightmaxval is weight range
+            i=i+1 ;
+        case 'weightnormtype'
+            weightnormtype = varargin{i+1}; % -weightmaxval to weightmaxval is weight range
             i=i+1 ;
         case 'k_fired'
             k_fired = varargin{i+1}; % learning rate for fired neuron
@@ -156,16 +167,31 @@ end
 weights = zeros([ncomponents N K]) ;
 % find 1st component: needs all the varargin values specified
 weights(1,:,:) = spectrotemporal2(filedir, filelist, 'fs', Fs, 'mincochfreq',minCochFreq, ...
-    'maxCochFreq', maxCochFreq, 'N_erbs', N_erbs, 'N', N, 'K', k, 'maxduration', MAXDURATION, ...
+    'maxCochFreq', maxCochFreq, 'N_erbs', N_erbs, 'N', N, 'K', K, 'maxduration', MAXDURATION, ...
     'smoothlength', smoothlength, 'useabs', useabs, 'logabs', logabs, 'logonset', logonset, ...
-    'useonset', useonset, 'useoffset', useoffset, 'weightnorm', weightnorm1, 'LIFrp', LIFrp, ...
+    'useonset', useonset, 'useoffset', useoffset, 'weightssupplied', weightarray, 'weightnorm', weightnorm1, 'LIFrp', LIFrp, ...
     'k_fired', k_fired, 'liftimestep', LIFtimestep,'LIFthreshold', LIFthreshold,  ...
-    'lifdissipation', LIFdissipation, 'posonly', posonly, 'debug', debug) ;
-for compnno = 2:ncomponents
-    weights(compno,:,:) = spectrotemporal2(f101dir, 'filelist_all.txt', 'fs', Fs, 'useabs', true, ...
-        'useonset', false, 'useoffset', false, 'weightnorm', weightnormsubseq, 'LIFrp', 0.025, ...
-        'k_fired', 0.0002, 'k_notfired', 0.001,'liftimestep', 0.0025, ...
-        'lifdissipation', 20, 'debug', debug, 'existingweights', weights(1:compno-1,:,:)) ;
+    'lifdissipation', LIFdissipation, 'posonly', posonly, 'weightnormtype', weightnormtype, 'debug', debug) ;
+for compno = 2:ncomponents
+    weights(compno,:,:) = spectrotemporal2(filedir, filelist, 'fs', Fs, 'mincochfreq',minCochFreq, ...
+    'maxCochFreq', maxCochFreq, 'N_erbs', N_erbs, 'N', N, 'K', K, 'maxduration', MAXDURATION, ...
+    'smoothlength', smoothlength, 'useabs', useabs, 'logabs', logabs, 'logonset', logonset, ...
+    'useonset', useonset, 'useoffset', useoffset, 'weightssupplied', weightarray, 'weightnorm', weightnormsubseq, 'LIFrp', LIFrp, ...
+    'k_fired', k_fired, 'liftimestep', LIFtimestep,'LIFthreshold', LIFthreshold,  ...
+    'lifdissipation', LIFdissipation, 'posonly', posonly, 'debug', debug, 'weightnormtype', weightnormtype, 'existingweights', weights(1:compno-1,:,:)) ;
     
 end
+% create a structure with all the parameters for returning
+params.filedir = filedir ;
+params.filelist = filelist ;
+params.Fs = Fs ;
+params.minCochFreq = minCochFreq ;
+params.maxCochFreq = maxCochFreq ;
+params.N_erbs = N_erbs ;
+params.N = N ;
+params.K = K ;
+params.maxduration = MAXDURATION ;
+params.smoothlength = smoothlength ;
+psrr
+
 end
