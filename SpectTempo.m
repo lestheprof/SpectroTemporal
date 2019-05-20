@@ -3,6 +3,8 @@ function weights = SpectTempo(filedir, filelist, ncomponents,  varargin)
 % the back-projection  of those already found.
 % aim is an industrial-strength component finder.
 % also would be good to put segmentation in as an option.
+% also would be good to return a structure with all the paramters for use in
+% re-creating the results.
 %
 % parameters: filedir: directory where the files are to be found
 % filelist: name of file with list of files to be run
@@ -179,4 +181,5 @@ for compno = 2:ncomponents
     'lifdissipation', LIFdissipation, 'posonly', posonly, 'debug', debug, 'weightnormtype', weightnormtype, 'existingweights', weights(1:compno-1,:,:)) ;
     
 end
+% create a structure with all the parameters for returning
 end
