@@ -21,7 +21,7 @@ while(i<=size(varargin,2))
             basetype = varargin{i+1};
             i=i+1 ;
         case 'n_erbs'
-            n_erbs = varargin{i+1};
+            n_erbs = = varargin{i+1};
             i=i+1 ;
         otherwise
             error('SpectTempo: Unknown argument %s given',varargin{i});
@@ -47,7 +47,7 @@ else
         % bandpass filter the noise
         rawsignal = zeros([params.N sigsamples]) ;
         for chno=1:1:params.N  % which channel
-            rawsignal(chno, :) = gammatone1(whitenoise',outFs,cochCFs(chno),n_erbs);
+            rawsignal(chno, :) = gammatone1(whitenoise',outFs,cochCFs(chno),params.N_erbs);
             % normalise to max value of 1
             rawsignal(chno, :) = rawsignal(chno, :) / max(abs(rawsignal(chno, :))) ;
         end

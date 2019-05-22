@@ -1,11 +1,12 @@
-function  writeweightsounds(filebasename, params, wtmatrix , numtowrite)
+function  writeweightsounds(filebasename, params, wtmatrix , numtowrite, basetype)
 %writeweightsounds write a nuymber of wav filkes from the weight matrix
 %   Detailed explanation goes here
 risetime = 0.005 ;
 falltime = 0.005 ;
 fs = 44100 ;
+n_erbs = 0.25 ;
 for sno = 1: numtowrite
-    filedata = resynthesize(params, squeeze(wtmatrix(sno,:,:)),'basetype', 1) ;
+    filedata = resynthesize(params, squeeze(wtmatrix(sno,:,:)),'basetype', 2, 'n_erbs', n_erbs) ;
     % normalise filedata to max value of 0.9
     filedata = (0.9/max(abs(filedata))) * filedata ;
     % modulate envelope
