@@ -1,4 +1,4 @@
-function outsignal = resynthesize(params,inputarray)
+function outsignal = resynthesize(params,inputarray, varargin)
 %resynthesize resynthesises a sound from the weight array using the
 % parameters supplied
 % params is the parameters used for creating the weight array. Not all
@@ -8,7 +8,22 @@ function outsignal = resynthesize(params,inputarray)
 % started LSS 20 May 2019
 %
 outFs = 44100 ; % sample rate for the output sound
-
+basetype = 1 ; % 1 is sine wave base type; 2 is noise base type
+% varargin parameter setting
+i = 1 ;
+while(i<=size(varargin,2))
+    switch lower(varargin{i})
+        case 'outfs'
+            outFs = varargin{i+1};
+            i=i+1 ;
+        case 'basetype'
+            basetype = varargin{i+1};
+            i=i+1 ;
+        otherwise
+            error('SpectTempo: Unknown argument %s given',varargin{i});
+    end
+    i=i+1 ;
+end
 % create the baseline signal which will be modulated to produce the final
 % signal
 [nbands, nsegments] = size(inputarray) ;
@@ -19,7 +34,22 @@ end
 sigduration = nsegments * params.LIFtimestep ; % signal duration
 sigsamples = ceil(sigduration * outFs) ;
 cochCFs=MakeErbCFs(params.minCochFreq,params.maxCochFreq,params.N); % get centre frequencies
-rawsignal = sin((2 * pi * cochCFs)' * ((0:sigsamples-1) / outFs)) ; % N (bands) times samples in each band
+if (basetype == 1) % sin wave base signal
+    rawsignal = sin((2 * pi * cochCFs)' * ((0:sigsamples-1) / outFs)) ; % N (bands) times samples in each band
+else
+    if (basetype == 2) % noise base type
+        % generatwe white nboise of appropriate length
+        whitenoise = wgn(sigsamples, 1, 0) ;
+        % bandpass filter the noise
+        rawsignal = zeros([params.N sigsamples]) ;
+        for chno=1:1:params.N  % which channel
+            rawsignal(chno, :) = gammatone1(whitenoise,outFs,cochCFs(chno),params.N_erbs);
+            % normalise to max value of 1
+            rawsignal(chno, :) = rawsignal(chno, :) / max(abs(rawsignal(chno, :))) ;
+        end
+    end
+end
+        
 outsignal = zeros(size(rawsignal)) ;
 
 % modulate the signal, band by band (can I do it all at once?)

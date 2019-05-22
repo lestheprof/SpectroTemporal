@@ -1,0 +1,19 @@
+function  writeweightsounds(filebasename, params, wtmatrix , numtowrite)
+%writeweightsounds write a nuymber of wav filkes from the weight matrix
+%   Detailed explanation goes here
+risetime = 0.005 ;
+falltime = 0.005
+fs = 44100 ;
+for sno = 1: numtowrite
+    filedata = resynthesize(params, squeeze(wtmatrix(sno,:,:)),'basetype', 1) ;
+    % normalise filedata to max value of 0.9
+    filedata = (0.9/max(abs(filedata))) * filedata ;
+    risefallmodulator = ones([1 length(filedata)]) ;
+    for sampno = 1: floor(risetime * fs)
+        risefallmodulator(sampno) = 
+        
+    audiowrite([filebasename '_' num2str(sno) '.wav'], filedata, fs) ;
+end
+
+end
+
