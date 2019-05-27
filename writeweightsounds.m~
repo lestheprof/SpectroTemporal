@@ -1,17 +1,42 @@
-function  writeweightsounds(filebasename, params, wtmatrix , numtowrite)
+function  writeweightsounds(filebasename, params, wtmatrix , numtowrite, basetype)
 %writeweightsounds write a nuymber of wav filkes from the weight matrix
 %   Detailed explanation goes here
 risetime = 0.005 ;
-falltime = 0.005
+falltime = 0.005 ;
 fs = 44100 ;
+n_erbs = 0.25 ;
+% varargin parameter setting
+i = 1 ;
+while(i<=size(varargin,2))
+    switch lower(varargin{i})
+        case 'risetime'
+           risetime = varargin{i+1}; % output sound rise time
+            i=i+1 ; 
+        case 'falltime'
+            falltime = varargin{i+1}; % output sound fall time
+            i=i+1 ; 
+        case 'n_erbs'
+            n
+        otherwise
+            error('writeweightsounds: Unknown argument %s given',varargin{i});
+    end
+    i=i+1 ;
+end
 for sno = 1: numtowrite
-    filedata = resynthesize(params, squeeze(wtmatrix(sno,:,:)),'basetype', 1) ;
+    filedata = resynthesize(params, squeeze(wtmatrix(sno,:,:)),'basetype', 2, 'n_erbs', n_erbs) ;
     % normalise filedata to max value of 0.9
     filedata = (0.9/max(abs(filedata))) * filedata ;
+    % modulate envelope
     risefallmodulator = ones([1 length(filedata)]) ;
     for sampno = 1: floor(risetime * fs)
-        risefallmodulator(sampno) = 
-        
+        risefallmodulator(sampno) = (sampno/floor(risetime * fs)) ; % ramp up
+    end
+    fallsamp = floor(falltime * fs) ;
+    for sampno = (length(filedata) - floor(falltime * fs)) : length(filedata)
+        risefallmodulator(sampno) = fallsamp/floor(falltime * fs) ;
+        fallsamp = fallsamp - 1 ;
+    end
+    filedata = risefallmodulator .* filedata ;    
     audiowrite([filebasename '_' num2str(sno) '.wav'], filedata, fs) ;
 end
 
